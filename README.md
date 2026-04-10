@@ -1,6 +1,6 @@
 # Reservas de Mesas
 
-Aplicación web para reservar mesas en restaurantes. Permite:
+Aplicación web para reservar mesas. Permite:
 
 - Seleccionar mesa, día, hora y duración
 - Añadir usuarios a la reserva
@@ -22,8 +22,6 @@ Aplicación web para reservar mesas en restaurantes. Permite:
 2. **Si usas VS Code Dev Containers:**
    - Abre la carpeta en VS Code y selecciona "Reopen in Container".
    - MongoDB se levantará automáticamente en el contenedor `mongo` (puerto 27017).
-   - El backend se ejecuta en el contenedor `backend` (Node.js 20).
-   - Instala dependencias y configura variables de entorno como abajo.
 3. **Si NO usas Dev Containers:**
    - Instala dependencias:
      - Backend: `cd backend && npm install`
@@ -62,9 +60,8 @@ Aplicación web para reservar mesas en restaurantes. Permite:
 ## Notas
 
 - El primer usuario debe ser marcado como admin manualmente en la base de datos (o cambia el rol en MongoDB).
-- El sistema de reservas impide solapamientos en la misma mesa y franja horaria.
-- Para producción, configura correctamente los orígenes y credenciales OAuth.
+- El sistema de reservas impide solapamientos en la misma mesa y franja horaria si alguna reserva se marca como "mesa completa".
 
 ---
 
-Desarrollado con Node.js, React y MongoDB.
+Desarrollado por JevyanJ.
