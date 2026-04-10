@@ -1,0 +1,21 @@
+{
+    "name": "Reservas DevContainer",
+    "dockerComposeFile": "docker-compose.yml",
+    "service": "backend",
+    "workspaceFolder": "/workspace",
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "terminal.integrated.shell.linux": "/bin/bash"
+            },
+            "extensions": [
+                "dbaeumer.vscode-eslint",
+                "esbenp.prettier-vscode"
+            ]
+        }
+    },
+    "forwardPorts": [
+        27017
+    ],
+    "postCreateCommand": "cd backend && npm install && cd ../frontend && npm install"
+}

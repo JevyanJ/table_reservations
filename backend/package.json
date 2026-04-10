@@ -1,0 +1,35 @@
+{
+    "name": "reservas-backend",
+    "version": "1.0.0",
+    "main": "index.js",
+    "type": "module",
+    "scripts": {
+        "start": "node src/index.js",
+        "dev": "nodemon src/index.js"
+    },
+    "dependencies": {
+        "@emotion/react": "^11.14.0",
+        "@emotion/styled": "^11.14.1",
+        "@mui/icons-material": "^7.3.9",
+        "@mui/material": "^7.3.9",
+        "axios": "^1.13.6",
+        "bcryptjs": "^2.4.3",
+        "cors": "^2.8.5",
+        "dotenv": "^16.0.3",
+        "express": "^4.18.2",
+        "express-session": "^1.17.3",
+        "jsonwebtoken": "^9.0.3",
+        "mongoose": "^7.0.3",
+        "passport": "^0.6.0",
+        "passport-google-oauth20": "^2.0.0",
+        "react-router-dom": "^7.13.1",
+        "swagger-jsdoc": "^6.2.8",
+        "swagger-ui-express": "^5.0.1"
+    },
+    "devDependencies": {
+        "nodemon": "^3.1.14"
+    },
+    "engines": {
+        "node": ">=22.0.0 <23"
+    }
+}
