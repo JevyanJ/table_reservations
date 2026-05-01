@@ -13,8 +13,8 @@ router.post('/find', isUser, async (req, res) => {
 });
 
 
-// Listar todos los usuarios (sólo admin)
-router.get('', isUser, isAdmin, async (req, res) => {
+// Listar todos los usuarios
+router.get('', isUser, async (req, res) => {
     const users = await User.find();
     res.json(users);
 });

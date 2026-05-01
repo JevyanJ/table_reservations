@@ -21,7 +21,7 @@ const Sidebar = () => {
                 <img src="/logo192.png" alt="Logo" />
             </div>
             <div className="sidebar-user">
-                <span>{me?.name || ''}</span>
+                <span>{me ? me.nickname ? me.nickname : me.name : ''}</span>
             </div>
             <nav className="sidebar-nav">
                 <Link
@@ -40,7 +40,7 @@ const Sidebar = () => {
                     aria-disabled={!isUser()}
                     onClick={e => { if (!isUser()) e.preventDefault(); }}
                 >
-                    Mis Reservas
+                    Reservas de mesa
                 </Link>
 
                 <Link

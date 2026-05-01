@@ -1,0 +1,66 @@
+.calendar-table-container {
+  margin-bottom: 2rem;
+}
+
+.calendar-table-title {
+  font-weight: 500;
+  margin-bottom: 1rem;
+}
+
+.calendar-table-loading {
+  margin: 1.5rem 0;
+  text-align: center;
+}
+
+.calendar-table-table-container {
+  margin: 1.5rem 0;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.calendar-table-sticky-header {
+  min-width: 120px;
+  font-weight: 700;
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: #fff;
+}
+
+.calendar-table-sticky-cell {
+  min-width: 120px;
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: #fff;
+}
+
+.calendar-table-cell {
+  font-weight: 700;
+  text-align: center;
+}
+
+.reservation-cell {
+  cursor: pointer;
+  transition: background 0.2s;
+  &:hover {
+    filter: brightness(0.9);
+  }
+  &.selected {
+    filter: brightness(0.9);
+    box-shadow:
+      0 2px 4px #0002,
+      0 1px 0 #fff8 inset;
+    background: linear-gradient(180deg, #fff 60%, #e0e0e0 100%);
+  }
+  &.available {
+    background: #ccffcc;
+  }
+  &.reserved {
+    background: #fff59d;
+  }
+  &.full {
+    background: #ff5252;
+    color: #fff;
+  }
+}

@@ -7,6 +7,7 @@ import passport from 'passport';
 import './passport.js';
 import authRoutes from './routes/auth.js';
 import reservationRoutes from './routes/reservation.js';
+import slotsRoutes from './routes/slots.js';
 import tableRoutes from './routes/table.js';
 import userRoutes from './routes/user.js';
 import activityRoutes from './routes/activity.js';
@@ -29,12 +30,14 @@ app.use((req, res, next) => {
         console.log(`[QUERY]`, req.query);
     }
     // Log respuesta al terminar
-    const oldSend = res.send;
-    res.send = function (data) {
-        const duration = Date.now() - start;
-        console.log(`[RES] ${req.method} ${req.originalUrl} (${duration}ms):`, data);
-        oldSend.apply(res, arguments);
-    };
+    if (process.env.LOG_LEVEL === 'debug') {
+        const oldSend = res.send;
+        res.send = function (data) {
+            const duration = Date.now() - start;
+            console.log(`[RES] ${req.method} ${req.originalUrl} (${duration}ms):`, data);
+            oldSend.apply(res, arguments);
+        };
+    }
     next();
 });
 app.use(cors({ origin: true, credentials: true }));
@@ -52,6 +55,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 app.use('/auth', authRoutes);
 app.use('/reservations', reservationRoutes);
+app.use('/slots', slotsRoutes);
 app.use('/tables', tableRoutes);
 app.use('/users', userRoutes);
 app.use('/activities', activityRoutes);

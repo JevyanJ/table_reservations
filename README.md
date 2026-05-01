@@ -30,6 +30,7 @@ Aplicación web para reservar mesas. Permite:
 4. Configura las variables de entorno:
    - Copia `.env.example` a `.env` en `/backend` y `/frontend` y rellena los valores necesarios.
    - Ejemplo backend:
+
      ```env
      GOOGLE_CLIENT_ID=... (de Google Cloud)
      GOOGLE_CLIENT_SECRET=...
@@ -37,10 +38,13 @@ Aplicación web para reservar mesas. Permite:
      MONGO_URI=mongodb://localhost:27017/reservas
      SESSION_SECRET=alguna_clave_segura
      ```
+
    - Ejemplo frontend:
+
      ```env
      REACT_APP_API_URL=http://localhost:4000
      ```
+
 5. Arranca el backend:
    - `cd backend && npm run dev`
 6. Arranca el frontend:

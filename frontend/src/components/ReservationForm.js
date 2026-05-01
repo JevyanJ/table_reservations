@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import Autocomplete from '@mui/material/Autocomplete';
+import dayjs from 'dayjs';
 import {
     FormControl,
     InputLabel,
@@ -9,20 +10,23 @@ import {
     TextField,
     Box
 } from '@mui/material';
+import styles from './ReservationForm.module.scss';
 import { useTables } from '../context/TablesContext';
 import { useMe } from '../context/MeContext';
 import { useUsers } from '../context/UsersContext';
+import { useReservations } from '../context/ReservationsContext';
 
 export default function ReservationForm ({
-    date
+    date,
+    onClose
 }) {
 
     const { tables } = useTables();
-    const { me, refreshReservations } = useMe();
+    const { me } = useMe();
+    const { handleCreateReservation } = useReservations();
     const { users } = useUsers();
     const [availableUsers, setAvailableUsers] = useState(users.filter(u => u._id !== me._id)); // Excluir al usuario actual de la lista
     const [selectedTable, setSelectedTable] = useState('');
-    const [disabled, setDisabled] = useState(false);
     const [form, setForm] = useState({
         start: '',
         end: '',
@@ -43,14 +47,6 @@ export default function ReservationForm ({
         });
     };
 
-    useEffect(() => {
-        if (!date) {
-            setDisabled(true);
-            resetForm();
-        } else {
-            setDisabled(false);
-        }
-    }, [date]);
 
     useEffect(() => {
         if (form.users.length === 0) {
@@ -68,24 +64,27 @@ export default function ReservationForm ({
     const createReservation = async () => {
         // Validar campos
         if (!selectedTable || !form.start || !form.end || form.end <= form.start) return;
-
+        console.log('Creando reserva con:', {
+            title: form.title,
+            description: form.description,
+            tableId: selectedTable,
+            start: dayjs(date + 'T' + form.start).toDate(),
+            end: dayjs(date + 'T' + form.end).toDate(),
+            userIds: form.users.map(u => u._id),
+            fullTable: form.fullTable
+        });
         try {
-            await fetch(process.env.REACT_APP_API_URL + '/reservations', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${localStorage.getItem('token')}`
-                },
-                body: JSON.stringify({
-                    tableId: selectedTable,
-                    start: new Date(date + 'T' + form.start),
-                    end: new Date(date + 'T' + form.end),
-                    userIds: form.users.map(u => u._id),
-                    fullTable: form.fullTable
-                })
+            handleCreateReservation({
+                title: form.title,
+                description: form.description,
+                tableId: selectedTable,
+                start: dayjs(date + 'T' + form.start).toDate(),
+                end: dayjs(date + 'T' + form.end).toDate(),
+                userIds: form.users.map(u => u._id),
+                fullTable: form.fullTable
             });
             resetForm();
-            refreshReservations(); // Refresca reservas del usuario
+            if (onClose) onClose();
         } catch (err) {
             alert('Error al crear la reserva. Inténtalo de nuevo.');
         }
@@ -93,16 +92,36 @@ export default function ReservationForm ({
 
     return (
         <Box
-            sx={{ maxWidth: 400, margin: 'auto', mt: 5, p: 3, borderRadius: 2, boxShadow: 3, bgcolor: 'background.paper', display: 'flex', flexDirection: 'column', gap: 2 }}
+            className={styles['reservation-form']}
         >
-            <Box sx={{ mb: 2, fontWeight: 'bold', fontSize: 20 }}>Nueva reserva</Box>
+            <Box sx={{ mb: 2, fontWeight: 'bold', fontSize: 20 }}>
+                Nueva reserva ({dayjs(date).format('DD/MM/YYYY')})
+            </Box>
             <FormControl fullWidth>
-                <InputLabel id="table-label">Mesa</InputLabel>
+                <InputLabel id="title-label" shrink={true} className={styles['input-label']}>Título</InputLabel>
+                <TextField
+                    fullWidth={true}
+                    value={form?.title || ''}
+                    onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+                />
+            </FormControl>
+            <FormControl fullWidth>
+                <InputLabel id="description-label" shrink={true} className={styles['input-label']}>Descripción</InputLabel>
+                <TextField
+                    fullWidth={true}
+                    value={form?.description || ''}
+                    onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                />
+            </FormControl>
+            <FormControl fullWidth>
+                <InputLabel id="table-label" shrink={true} className={styles['input-label']}>Mesa *</InputLabel>
                 <Select
                     labelId="table-label"
                     value={selectedTable}
                     label="Mesa"
-                    disabled={disabled}
+                    variant="outlined"
+                    margin="dense"
+                    fullWidth={true}
                     onChange={e => setSelectedTable(e.target.value)}
                 >
                     {tables.map(table => (
@@ -111,12 +130,14 @@ export default function ReservationForm ({
                 </Select>
             </FormControl>
             <FormControl fullWidth>
-                <InputLabel id="start-time-label">Hora inicio</InputLabel>
+                <InputLabel id="start-time-label" shrink={true} className={styles['input-label']}>Hora inicio *</InputLabel>
                 <Select
                     labelId="start-time-label"
                     value={form.start}
                     label="Hora inicio"
-                    disabled={disabled}
+                    variant="outlined"
+                    margin="dense"
+                    fullWidth={true}
                     onChange={e => setForm(f => ({ ...f, start: e.target.value }))}
                 >
                     {Array.from({ length: 48 }, (_, i) => {
@@ -128,12 +149,11 @@ export default function ReservationForm ({
                 </Select>
             </FormControl>
             <FormControl fullWidth>
-                <InputLabel id="end-time-label">Hora fin</InputLabel>
+                <InputLabel id="end-time-label" shrink={true} className={styles['input-label']}>Hora fin *</InputLabel>
                 <Select
                     labelId="end-time-label"
                     value={form.end}
                     label="Hora fin"
-                    disabled={disabled}
                     onChange={e => setForm(f => ({ ...f, end: e.target.value }))}
                 >
                     {Array.from({ length: 48 }, (_, i) => {
@@ -179,7 +199,6 @@ export default function ReservationForm ({
                         {...params}
                         label="Jugadores"
                         placeholder={form.users.length === 0 ? "Selecciona jugadores" : ""}
-                        disabled={disabled}
                     />
                 )}
                 sx={{ mb: 2 }}
@@ -205,8 +224,6 @@ export default function ReservationForm ({
                         type="checkbox"
                         id="full-table-checkbox"
                         checked={form.fullTable}
-                        defaultChecked={false}
-                        disabled={disabled}
                         onChange={e => setForm(f => ({ ...f, fullTable: e.target.checked }))}
                         style={{ marginRight: 8 }}
                     />
@@ -216,14 +233,13 @@ export default function ReservationForm ({
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 2, mt: 2 }}>
                 <Button
                     onClick={resetForm}
-                    disabled={disabled}
                 >
                     Resetear
                 </Button>
                 <Button
                     onClick={createReservation}
                     variant="contained"
-                    disabled={!form.start || !form.end || (form.start && form.end && form.end <= form.start) || disabled}
+                    disabled={!form.start || !form.end || (form.start && form.end && form.end <= form.start)}
                 >
                     Reservar
                 </Button>

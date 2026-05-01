@@ -1,6 +1,8 @@
 import mongoose from 'mongoose';
 
 const reservationSchema = new mongoose.Schema({
+    title: { type: String, required: false },
+    description: { type: String, required: false },
     table: { type: mongoose.Schema.Types.ObjectId, ref: 'Table', required: true },
     users: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     userCount: { type: Number, required: true },

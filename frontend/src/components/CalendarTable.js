@@ -1,5 +1,9 @@
 
 import { React, useState, useEffect } from 'react';
+import dayjs from 'dayjs';
+import timezone from 'dayjs/plugin/timezone';
+import utc from 'dayjs/plugin/utc';
+import styles from './CalendarTable.module.scss';
 import { useToken } from '../context/TokenContext';
 import { useTables } from '../context/TablesContext';
 import {
@@ -11,26 +15,33 @@ import {
     TableHead,
     TableRow,
     Paper,
-    Typography,
-    Button
+    Typography
 } from '@mui/material';
 import axios from 'axios';
 
-function ReservationCell ({ value }) {
-    let color = '#ccffcc'; // verde
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+function ReservationCell ({ value, onClick, selected }) {
+    let cellClass = styles['reservation-cell'] + ' ';
     let text = '';
-    if (!value.available) {
-        color = '#ff5252'; // rojo
-        text = `Completa (${value.peopleCount} px)`; // Mostrar número de personas si no está disponible
-    }
-    if (value.available && value.reservations.length > 0) {
-        color = '#fff59d'; // amarillo
-        text = `Reservas (${value.peopleCount} px)`;
+    if (value) {
+        if (!value.available) {
+            cellClass += styles.full;
+            text = `Completa (${value.peopleCount} px)`;
+        } else if (value.available && value.reservations.length > 0) {
+            cellClass += styles.reserved;
+            text = `Reservas (${value.peopleCount} px)`;
+        } else {
+            cellClass += styles.available;
+        }
     }
     return (
         <TableCell
             align="center"
-            sx={{ bgcolor: color }}
+            className={cellClass + (selected ? ' ' + styles.selected : '')}
+            onClick={onClick}
         >
             {text}
         </TableCell>
@@ -38,23 +49,26 @@ function ReservationCell ({ value }) {
 }
 
 // date: string YYYY-MM-DD
-export default function CalendarTable ({ date }) {
+export default function CalendarTable ({ date, setIDs }) {
     // Obtener mesas del contexto
     const { tables, loading: loadingTables, findTableById } = useTables();
     const [slots, setSlots] = useState([]);
     const { token } = useToken();
     const [loading, setLoading] = useState(true);
+    const [selectedCell, setSelectedCell] = useState(null);
 
     // Generar las franjas de media hora
     const timeSlots = Array.from({ length: 48 }, (_, i) => {
         const hour = String(Math.floor(i / 2)).padStart(2, '0');
         const min = i % 2 === 0 ? '00' : '30';
-        return `${hour}:${min}`;
-    });
 
-    // Columnas ocultas hasta las 10:00 (índice 0 a 19)
-    const HIDDEN_COLS = 20; // 00:00 a 09:30
-    const [showEarly, setShowEarly] = useState(false);
+        // current: Date JS en zona local
+        const local = dayjs.tz(date + `T${hour}:${min}`, 'Europe/Madrid');
+        return {
+            current: local.utc().toISOString().slice(11, 16), // HH:mm en UTC para comparar con backend
+            local: local.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+    });
 
     useEffect(() => {
         if (loadingTables || !tables || tables.length === 0) {
@@ -63,14 +77,14 @@ export default function CalendarTable ({ date }) {
         setLoading(true);
         const fetchSlots = async () => {
             try {
-                const res = await axios.get(process.env.REACT_APP_API_URL + '/reservations/slots', {
+                const res = await axios.get(process.env.REACT_APP_API_URL + '/slots', {
                     headers: { Authorization: `Bearer ${token}` },
                     params: { date, tableIds: tables.map(t => t._id).join(',') }
                 });
-                if (res.data && res.data.reservations) {
-                    setSlots(res.data.reservations);
+                if (res.data && res.data.slots) {
+                    setSlots(res.data.slots);
                 } else {
-                    console.error('Respuesta inesperada de /reservations/slots:', res.data);
+                    console.error('Respuesta inesperada de /slots:', res.data);
                     setSlots([]);
                 }
             } catch (e) {
@@ -84,80 +98,61 @@ export default function CalendarTable ({ date }) {
     }, [date, token, loadingTables, tables]);
 
     return (
-        <Box sx={{ mb: 4 }}>
-            <Typography variant="h5" component="h2" gutterBottom sx={{ fontWeight: 500 }}>
+        <Box className={styles['calendar-table-container']}>
+            <Typography variant="h5" component="h2" gutterBottom className={styles['calendar-table-title']}>
                 Disponibilidad de mesas
             </Typography>
 
             {loading || loadingTables ? (
-                <Box sx={{ my: 3, textAlign: 'center' }}>Cargando disponibilidad...</Box>
+                <Box className={styles['calendar-table-loading']}>Cargando disponibilidad...</Box>
             ) : (
                 <Box>
-                    <TableContainer component={Paper} sx={{ my: 3, borderRadius: 2, boxShadow: 5 }}>
-                        <Table size="small" sx={{ m: 0, mt: 1, mr: 0, ml: 0, width: '100%' }}>
+                    <TableContainer component={Paper} className={styles['calendar-table-table-container']}>
+                        <Table size="small">
                             <TableHead>
                                 <TableRow>
-                                    <TableCell sx={{ minWidth: 120, fontWeight: 700, position: 'sticky', left: 0, zIndex: 2, bgcolor: 'background.paper' }}>
+                                    <TableCell className={styles['calendar-table-sticky-header']}>
                                         Mesa
                                     </TableCell>
-                                    {/* Columnas hasta 09:30 */}
-                                    {!showEarly && null}
-                                    {(!showEarly ? timeSlots.slice(HIDDEN_COLS) : timeSlots).map((slot, idx) => {
-                                        if (!showEarly && idx === 0) {
-                                            return [
-                                                <TableCell key="show-early-btn" align="center" sx={{ p: 0, border: 0, bgcolor: 'transparent', width: 0 }} colSpan={1}>
-                                                    <Button
-                                                        size="small"
-                                                        style={{ padding: 0, minWidth: 0 }}
-                                                        onClick={() => setShowEarly(true)}
-                                                    >
-                                                        +
-                                                    </Button>
-                                                </TableCell>,
-                                                <TableCell key={slot} align="center" sx={{ fontWeight: 700 }}>{slot}</TableCell>
-                                            ];
-                                        }
-                                        if (showEarly && slot === '10:00') {
-                                            return [
-                                                <TableCell key="hide-early-btn" align="center" sx={{ p: 0, border: 0, bgcolor: 'transparent', width: 0 }} colSpan={1}>
-                                                    <Button
-                                                        color="secondary"
-                                                        size="small"
-                                                        style={{ padding: 0, minWidth: 0 }}
-                                                        onClick={() => setShowEarly(false)}
-                                                    >
-                                                        -
-                                                    </Button>
-                                                </TableCell>,
-                                                <TableCell key={slot} align="center" sx={{ fontWeight: 700 }}>{slot}</TableCell>
-                                            ];
-                                        }
-                                        return <TableCell key={slot} align="center" sx={{ fontWeight: 700 }}>{slot}</TableCell>;
-                                    })}
+                                    {timeSlots.map(slot => (
+                                        <TableCell
+                                            key={slot.local}
+                                            align="center"
+                                            className={styles['calendar-table-cell']}
+                                        >
+                                            {slot.local}
+                                        </TableCell>
+                                    ))}
                                 </TableRow>
                             </TableHead>
                             <TableBody>
                                 {Object.entries(slots).map(([key, value]) => {
-                                    const tableInfo = findTableById(key);
+                                    const tableId = key;
+                                    const tableInfo = findTableById(tableId);
                                     if (!tableInfo) return null;
                                     return (
-                                        <TableRow key={key}>
-                                            <TableCell sx={{ minWidth: 120, position: 'sticky', left: 0, zIndex: 1, bgcolor: 'background.paper' }}>{tableInfo.name}</TableCell>
-                                            {/* Celdas de reserva, alineadas con las columnas visibles y el botón */}
-                                            {(!showEarly ? timeSlots.slice(HIDDEN_COLS) : timeSlots).map((slot, idx) => {
-                                                if (!showEarly && idx === 0) {
-                                                    return [
-                                                        <TableCell key="show-early-btn-cell" align="center" sx={{ p: 0, border: 0, bgcolor: 'transparent', width: 0 }} colSpan={1}></TableCell>,
-                                                        <ReservationCell key={slot} value={value[slot]} />
-                                                    ];
-                                                }
-                                                if (showEarly && slot === '10:00') {
-                                                    return [
-                                                        <TableCell key="hide-early-btn-cell" align="center" sx={{ p: 0, border: 0, bgcolor: 'transparent', width: 0 }} colSpan={1}></TableCell>,
-                                                        <ReservationCell key={slot} value={value[slot]} />
-                                                    ];
-                                                }
-                                                return <ReservationCell key={slot} value={value[slot]} />;
+                                        <TableRow key={tableId}>
+                                            <TableCell className={styles['calendar-table-sticky-cell']}>{tableInfo.name}</TableCell>
+                                            {timeSlots.map(slot => {
+                                                return (
+                                                    <ReservationCell
+                                                        key={`${tableId}-${slot.current}`}
+                                                        value={value[slot.current]}
+                                                        selected={selectedCell === `${tableId}-${slot.current}`}
+                                                        onClick={() => {
+                                                            if (selectedCell === `${tableId}-${slot.current}`) {
+                                                                setIDs([]);
+                                                                setSelectedCell(null);
+                                                            } else {
+                                                                if (value[slot.current] && value[slot.current].reservations) {
+                                                                    setIDs(() => value[slot.current].reservations.map(r => r.id));
+                                                                    console.log('IDS: ', value[slot.current].reservations.map(r => r.id));
+                                                                }
+                                                                setSelectedCell(`${tableId}-${slot.current}`);
+                                                            }
+                                                        }}
+                                                    />
+                                                )
                                             })}
                                         </TableRow>
                                     );

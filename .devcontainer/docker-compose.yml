@@ -7,16 +7,19 @@ services:
     volumes:
       - ..:/workspace:cached
     command: sleep infinity
+    network_mode: host
     depends_on:
       - mongodb
     ports:
       - 4000:4000
+      - 3000:3000
   
   mongodb:
     image: mongo:latest
     container_name: mongodb
     ports:
       - "27017:27017"
+    network_mode: host
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: example

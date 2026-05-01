@@ -1,18 +1,20 @@
 import express from 'express';
+import dayjs from 'dayjs';
 import Reservation from '../models/Reservation.js';
 import { bearerAuth, isUser } from '../utils/auth.js';
 import User from '../models/User.js';
 import Table from '../models/Table.js';
 
+
 const router = express.Router();
 
-// Get reservations for current user
-// GET /reservations?all_users=true&date=YYYY-MM-DD
+// Get reservations
+// GET /reservations?only_me=true&date=YYYY-MM-DD
 router.get('', bearerAuth, async (req, res) => {
-    const { all_users, date } = req.query;
+    const { only_me, date } = req.query;
     const filter = {};
     // Filtrar por usuario
-    if (!all_users) {
+    if (only_me) {
         filter.$or = [
             { users: req.user._id },
             { createdBy: req.user._id }
@@ -20,18 +22,42 @@ router.get('', bearerAuth, async (req, res) => {
     }
     // Filtrar por fecha
     if (date) {
-        const startOfDay = new Date(date + 'T00:00:00');
-        const endOfDay = new Date(date + 'T23:59:59');
+        const startOfDay = dayjs(date).startOf('day').toDate();
+        const endOfDay = dayjs(date).endOf('day').toDate();
         filter.start = { $gte: startOfDay, $lte: endOfDay };
     }
     const reservations = await Reservation.find(filter).populate('table users');
     res.json(reservations);
 });
 
+// Get reservations
+// GET /reservations/:id
+router.get('/:id', bearerAuth, async (req, res) => {
+    const filter = { _id: req.params.id };
+
+    const reservations = await Reservation.find(filter).populate('table users');
+    if (!reservations || reservations.length === 0) {
+        return res.status(404).json({ error: 'Not found' });
+    }
+    res.json(reservations[0]);
+});
+
 // Create reservation
 router.post('', isUser, async (req, res) => {
-    const { tableName, start, end, userIds, userEmails, fullTable, userCount } = req.body;
+    const {
+        title,
+        description,
+        tableName,
+        start,
+        end,
+        userIds,
+        userEmails,
+        fullTable,
+        userCount
+    } = req.body;
     let tableId = req.body.tableId; // Para permitir modificar tableId si se proporciona tableName
+    const localStartDate = dayjs(start).toDate();
+    const localEndDate = dayjs(end).toDate();
     console.log("Body: ", req.body);
 
     if (!tableId && !tableName) {
@@ -44,7 +70,7 @@ router.post('', isUser, async (req, res) => {
         }
         tableId = table._id;
     }
-    if (!start || !end || new Date(end) <= new Date(start)) {
+    if (!start || !end || localEndDate <= localStartDate) {
         return res.status(400).json({ error: 'Fechas inválidas' });
     }
 
@@ -53,9 +79,9 @@ router.post('', isUser, async (req, res) => {
     const overlapQuery = {
         table: tableId,
         $or: [
-            { start: { $lt: end, $gte: start } },
-            { end: { $gt: start, $lte: end } },
-            { start: { $lte: start }, end: { $gte: end } }
+            { start: { $lt: localEndDate, $gte: localStartDate } },
+            { end: { $gt: localStartDate, $lte: localEndDate } },
+            { start: { $lte: localStartDate }, end: { $gte: localEndDate } }
         ],
         fullTable: true // Si hay una reserva fullTable, no permitir ninguna otra reserva en ese rango  
     };
@@ -81,10 +107,12 @@ router.post('', isUser, async (req, res) => {
     }
 
     const reservationData = {
+        title,
+        description,
         table: tableId,
         users: finalUserIds,
-        start,
-        end,
+        start: localStartDate,
+        end: localEndDate,
         userCount: realUsersCount,
         createdBy: req.user._id
     };
@@ -119,8 +147,6 @@ router.get('/slots', bearerAuth, async (req, res) => {
         }
     }
 
-
-
     let output = {};
     for (const tableId of tableIds) {
 
@@ -137,8 +163,8 @@ router.get('/slots', bearerAuth, async (req, res) => {
         for (const slot of Object.keys(slots)) {
             const reservations = await Reservation.find({
                 table: tableId,
-                start: { $lte: new Date(date + 'T' + slot) },
-                end: { $gt: new Date(date + 'T' + slot) }
+                start: { $lte: dayjs(date + 'T' + slot).toDate() },
+                end: { $gte: dayjs(date + 'T' + slot).toDate() }
             });
             const reservationsData = reservations.map(r => ({
                 id: r._id,
