@@ -1,9 +1,13 @@
 import express from 'express';
 import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc.js';
+import timezone from 'dayjs/plugin/timezone.js';
 import Reservation from '../models/Reservation.js';
 import { bearerAuth } from '../utils/auth.js';
 import Table from '../models/Table.js';
 
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 const router = express.Router();
 
@@ -11,6 +15,7 @@ const router = express.Router();
 router.get('', bearerAuth, async (req, res) => {
     let tableIds = req.query.tableIds; // Puede ser un string separado por comas o un array
     const { date } = req.query; // YYYY-MM-DD
+    const timezone = req.query.timezone || 'UTC';
 
     if (!tableIds) {
         tableIds = await Table.find().select('_id').then(tables => tables.map(t => t._id.toString()));
@@ -36,8 +41,8 @@ router.get('', bearerAuth, async (req, res) => {
         for (const slot of Object.keys(slots)) {
             const reservations = await Reservation.find({
                 table: tableId,
-                start: { $lte: dayjs(date + 'T' + slot).toDate() },
-                end: { $gte: dayjs(date + 'T' + slot).toDate() }
+                start: { $lte: dayjs.tz(date + 'T' + slot, timezone).toDate() },
+                end: { $gte: dayjs.tz(date + 'T' + slot, timezone).toDate() }
             });
             const reservationsData = reservations.map(r => ({
                 id: r._id,

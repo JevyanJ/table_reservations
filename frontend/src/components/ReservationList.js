@@ -2,13 +2,17 @@ import { React, useState, useEffect } from 'react';
 import dayjs from 'dayjs';
 import { Box, Typography, List, ListItem, ListItemText, IconButton, Chip } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
 import { useReservations } from '../context/ReservationsContext';
 import { useMe } from '../context/MeContext';
+import { useSlots } from '../context/SlotsContext';
 
-export default function ReservationList ({ ids }) {
-    const { handleDeleteReservation, getReservationsForIDs } = useReservations();
+export default function ReservationList ({ ids, onEdit }) {
+    const { handleDeleteReservation, getReservationsForIDs, handleEditReservation } = useReservations();
     const { me } = useMe();
+    const { refreshSlots } = useSlots();
     const [reservations, setReservations] = useState([]);
+
 
     useEffect(() => {
         if (!ids || ids.length === 0) {
@@ -23,13 +27,15 @@ export default function ReservationList ({ ids }) {
     }, [ids, getReservationsForIDs]);
 
     return (
-        <Box mt={4}>
+        <Box mt={4} mr={5}>
             <Typography variant="h5" component="h2" gutterBottom sx={{ fontWeight: 500 }}>
                 Reservas
             </Typography>
             <List>
                 {!reservations || reservations.length === 0 ? (
-                    <ListItem><ListItemText primary="No hay reservas este día." /></ListItem>
+                    <ListItem>
+                        <ListItemText primary="No hay reservas en esa franja. Selecciona una distinta." />
+                    </ListItem>
                 ) : (
                     reservations.map(r => (
 
@@ -40,9 +46,17 @@ export default function ReservationList ({ ids }) {
                                 alignItems: 'center'
                             }}
                             secondaryAction={r.createdBy === me?._id ? (
-                                <IconButton edge="end" aria-label="delete" onClick={() => handleDeleteReservation(r._id)}>
-                                    <DeleteIcon />
-                                </IconButton>
+                                <>
+                                    <IconButton edge="end" aria-label="delete" onClick={async () => {
+                                        await handleDeleteReservation(r._id);
+                                        refreshSlots();
+                                    }}>
+                                        <DeleteIcon />
+                                    </IconButton>
+                                    <IconButton edge="end" aria-label="edit" onClick={() => onEdit(r)}>
+                                        <EditIcon />
+                                    </IconButton>
+                                </>
                             ) : null}>
                             <ListItemText
                                 sx={{ flex: 1 }}

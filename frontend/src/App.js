@@ -15,6 +15,7 @@ import { ReservationsProvider } from './context/ReservationsContext';
 import { TablesProvider } from './context/TablesContext';
 import { UsersProvider } from './context/UsersContext';
 import { ActivitiesProvider } from './context/ActivitiesContext';
+import { SlotsProvider } from './context/SlotsContext';
 import './App.css';
 
 function App () {
@@ -23,63 +24,65 @@ function App () {
       <MeProvider>
         <ReservationsProvider>
           <TablesProvider>
-            <UsersProvider>
-              <ActivitiesProvider>
-                <Router>
-                  <CssBaseline />
-                  <Sidebar />
-                  <Container
-                    sx={{
-                      p: 3,
-                      ml: '220px',
-                      mr: 0,
-                      width: 'calc(100vw - 220px)',
-                      minWidth: 'calc(100vw - 220px)',
-                      maxWidth: 'calc(100vw - 220px)',
-                      minHeight: '100vh',
-                    }}
-                  >
-                    <Routes>
-                      <Route path="/" element={<HomePage />} />
-                      <Route path="/login" element={<LoginPage />} />
-                      <Route
-                        path="/reservas"
-                        element={
-                          <ProtectedRoute userOnly>
-                            <ReservationsPage />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/admin"
-                        element={
-                          <ProtectedRoute adminOnly>
-                            <AdminPage />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/perfil"
-                        element={
-                          <ProtectedRoute>
-                            <ProfilePage />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route
-                        path="/activities"
-                        element={
-                          <ProtectedRoute>
-                            <ActivitiesPage />
-                          </ProtectedRoute>
-                        }
-                      />
-                      <Route path="*" element={<Navigate to="/" />} />
-                    </Routes>
-                  </Container>
-                </Router>
-              </ActivitiesProvider>
-            </UsersProvider>
+            <SlotsProvider>
+              <UsersProvider>
+                <ActivitiesProvider>
+                  <Router>
+                    <CssBaseline />
+                    <Sidebar />
+                    <Container
+                      sx={{
+                        p: 3,
+                        ml: '220px',
+                        mr: 0,
+                        width: 'calc(100vw - 220px)',
+                        minWidth: 'calc(100vw - 220px)',
+                        maxWidth: 'calc(100vw - 220px)',
+                        minHeight: '100vh',
+                      }}
+                    >
+                      <Routes>
+                        <Route path="/" element={<HomePage />} />
+                        <Route path="/login" element={<LoginPage />} />
+                        <Route
+                          path="/reservas"
+                          element={
+                            <ProtectedRoute userOnly>
+                              <ReservationsPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin"
+                          element={
+                            <ProtectedRoute adminOnly>
+                              <AdminPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/perfil"
+                          element={
+                            <ProtectedRoute>
+                              <ProfilePage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/activities"
+                          element={
+                            <ProtectedRoute>
+                              <ActivitiesPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route path="*" element={<Navigate to="/" />} />
+                      </Routes>
+                    </Container>
+                  </Router>
+                </ActivitiesProvider>
+              </UsersProvider>
+            </SlotsProvider>
           </TablesProvider>
         </ReservationsProvider>
       </MeProvider>

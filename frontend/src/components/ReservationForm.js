@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import Autocomplete from '@mui/material/Autocomplete';
 import dayjs from 'dayjs';
+import timezone from 'dayjs/plugin/timezone';
 import {
     FormControl,
     InputLabel,
@@ -14,20 +15,26 @@ import styles from './ReservationForm.module.scss';
 import { useTables } from '../context/TablesContext';
 import { useMe } from '../context/MeContext';
 import { useUsers } from '../context/UsersContext';
-import { useReservations } from '../context/ReservationsContext';
 
 export default function ReservationForm ({
     date,
-    onClose
+    data,
+    onAction
 }) {
 
     const { tables } = useTables();
     const { me } = useMe();
-    const { handleCreateReservation } = useReservations();
     const { users } = useUsers();
     const [availableUsers, setAvailableUsers] = useState(users.filter(u => u._id !== me._id)); // Excluir al usuario actual de la lista
     const [selectedTable, setSelectedTable] = useState('');
-    const [form, setForm] = useState({
+    const [form, setForm] = useState(data ? {
+        ...data,
+        start: data.start || '',
+        end: data.end || '',
+        users: data.users || (me ? [me] : []),
+        numPlayers: data.numPlayers || (me ? 1 : 0),
+        fullTable: data.fullTable || false
+    } : {
         start: '',
         end: '',
         users: me ? [me] : [],
@@ -60,43 +67,33 @@ export default function ReservationForm ({
         );
     }, [form.users, users]);
 
+    const clickAcept = () => {
+        if (!selectedTable || !form.start || !form.end || form.end <= form.start) {
+            alert('Por favor, completa todos los campos obligatorios y asegúrate de que la hora de fin sea posterior a la de inicio.');
+            return;
+        }
 
-    const createReservation = async () => {
-        // Validar campos
-        if (!selectedTable || !form.start || !form.end || form.end <= form.start) return;
-        console.log('Creando reserva con:', {
+        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        onAction({
             title: form.title,
             description: form.description,
             tableId: selectedTable,
-            start: dayjs(date + 'T' + form.start).toDate(),
-            end: dayjs(date + 'T' + form.end).toDate(),
+            start: dayjs(date + 'T' + form.start).tz(timezone).toDate(),
+            end: dayjs(date + 'T' + form.end).tz(timezone).toDate(),
             userIds: form.users.map(u => u._id),
             fullTable: form.fullTable
         });
-        try {
-            handleCreateReservation({
-                title: form.title,
-                description: form.description,
-                tableId: selectedTable,
-                start: dayjs(date + 'T' + form.start).toDate(),
-                end: dayjs(date + 'T' + form.end).toDate(),
-                userIds: form.users.map(u => u._id),
-                fullTable: form.fullTable
-            });
-            resetForm();
-            if (onClose) onClose();
-        } catch (err) {
-            alert('Error al crear la reserva. Inténtalo de nuevo.');
-        }
     };
+
 
     return (
         <Box
             className={styles['reservation-form']}
         >
             <Box sx={{ mb: 2, fontWeight: 'bold', fontSize: 20 }}>
-                Nueva reserva ({dayjs(date).format('DD/MM/YYYY')})
+                {data ? `Editar reserva (${dayjs(date).format('DD/MM/YYYY')})` : `Nueva reserva (${dayjs(date).format('DD/MM/YYYY')})`}
             </Box>
+            {/* Título */}
             <FormControl fullWidth>
                 <InputLabel id="title-label" shrink={true} className={styles['input-label']}>Título</InputLabel>
                 <TextField
@@ -105,6 +102,7 @@ export default function ReservationForm ({
                     onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
                 />
             </FormControl>
+            {/* Descripción */}
             <FormControl fullWidth>
                 <InputLabel id="description-label" shrink={true} className={styles['input-label']}>Descripción</InputLabel>
                 <TextField
@@ -113,6 +111,7 @@ export default function ReservationForm ({
                     onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
                 />
             </FormControl>
+            {/* Mesa */}
             <FormControl fullWidth>
                 <InputLabel id="table-label" shrink={true} className={styles['input-label']}>Mesa *</InputLabel>
                 <Select
@@ -129,6 +128,7 @@ export default function ReservationForm ({
                     ))}
                 </Select>
             </FormControl>
+            {/* Hora inicio */}
             <FormControl fullWidth>
                 <InputLabel id="start-time-label" shrink={true} className={styles['input-label']}>Hora inicio *</InputLabel>
                 <Select
@@ -148,6 +148,7 @@ export default function ReservationForm ({
                     })}
                 </Select>
             </FormControl>
+            {/* Hora fin */}
             <FormControl fullWidth>
                 <InputLabel id="end-time-label" shrink={true} className={styles['input-label']}>Hora fin *</InputLabel>
                 <Select
@@ -237,7 +238,7 @@ export default function ReservationForm ({
                     Resetear
                 </Button>
                 <Button
-                    onClick={createReservation}
+                    onClick={clickAcept}
                     variant="contained"
                     disabled={!form.start || !form.end || (form.start && form.end && form.end <= form.start)}
                 >

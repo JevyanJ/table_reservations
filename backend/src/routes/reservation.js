@@ -56,9 +56,6 @@ router.post('', isUser, async (req, res) => {
         userCount
     } = req.body;
     let tableId = req.body.tableId; // Para permitir modificar tableId si se proporciona tableName
-    const localStartDate = dayjs(start).toDate();
-    const localEndDate = dayjs(end).toDate();
-    console.log("Body: ", req.body);
 
     if (!tableId && !tableName) {
         return res.status(400).json({ error: 'tableId o tableName es requerido' });
@@ -70,7 +67,7 @@ router.post('', isUser, async (req, res) => {
         }
         tableId = table._id;
     }
-    if (!start || !end || localEndDate <= localStartDate) {
+    if (!start || !end || end <= start) {
         return res.status(400).json({ error: 'Fechas inválidas' });
     }
 
@@ -79,9 +76,9 @@ router.post('', isUser, async (req, res) => {
     const overlapQuery = {
         table: tableId,
         $or: [
-            { start: { $lt: localEndDate, $gte: localStartDate } },
-            { end: { $gt: localStartDate, $lte: localEndDate } },
-            { start: { $lte: localStartDate }, end: { $gte: localEndDate } }
+            { start: { $lt: end, $gte: start } },
+            { end: { $gt: start, $lte: end } },
+            { start: { $lte: start }, end: { $gte: end } }
         ],
         fullTable: true // Si hay una reserva fullTable, no permitir ninguna otra reserva en ese rango  
     };
@@ -111,8 +108,8 @@ router.post('', isUser, async (req, res) => {
         description,
         table: tableId,
         users: finalUserIds,
-        start: localStartDate,
-        end: localEndDate,
+        start: start,
+        end: end,
         userCount: realUsersCount,
         createdBy: req.user._id
     };
@@ -121,6 +118,78 @@ router.post('', isUser, async (req, res) => {
     }
     const reservation = await Reservation.create(reservationData);
     res.status(201).json(reservation);
+});
+
+// Edit reservation (only creator or admin)
+router.put('/:id', bearerAuth, async (req, res) => {
+    const reservation = await Reservation.findById(req.params.id);
+    if (!reservation) return res.status(404).json({ error: 'Not found' });
+    if (reservation.createdBy.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    const {
+        title,
+        description,
+        tableName,
+        start,
+        end,
+        userIds,
+        userEmails,
+        fullTable,
+        userCount
+    } = req.body;
+    let tableId = req.body.tableId; // Para permitir modificar tableId si se proporciona tableName
+
+    if (tableName) {
+        const table = await Table.findOne({ name: tableName });
+        if (!table) {
+            return res.status(400).json({ error: `No se encontró la mesa con ese nombre: ${tableName}` });
+        }
+        tableId = table._id;
+    }
+    if (start && end && end <= start) {
+        return res.status(400).json({ error: 'Fechas inválidas' });
+    }
+
+    // Buscar reservas que se solapan
+    const overlapQuery = {
+        _id: { $ne: reservation._id }, // Excluir la reserva actual
+        table: tableId || reservation.table,
+        $or: [
+            { start: { $lt: end, $gte: start } },
+            { end: { $gt: start, $lte: end } },
+            { start: { $lte: start }, end: { $gte: end } }
+        ],
+        fullTable: true // Si hay una reserva fullTable, no permitir ninguna otra reserva en ese rango  
+    };
+
+    const overlaps = await Reservation.find(overlapQuery);
+    if (overlaps.length > 0) {
+        return res.status(409).json({ error: 'Esta mesa ya está completa en ese horario.' });
+    }
+
+    if (tableId) reservation.table = tableId;
+    if (title) reservation.title = title;
+    if (description) reservation.description = description;
+    if (typeof fullTable !== 'undefined') reservation.fullTable = !!fullTable;
+    if (userIds) reservation.users = userIds;
+
+    if (userEmails && userEmails.length > 0) {
+        const users = await User.find({ email: { $in: userEmails } });
+        if (users.length !== userEmails.length) {
+            return res.status(400).json({ error: 'Algunos emails no corresponden a usuarios registrados.' });
+        }
+        const userIdsFromEmails = users.map(u => u._id.toString());
+        reservation.users = [...new Set([...(reservation.users || []).map(id => id.toString()), ...userIdsFromEmails])];
+    }
+
+    if (start) reservation.start = start;
+    if (end) reservation.end = end;
+    if (userCount) reservation.userCount = userCount;
+
+    await reservation.save();
+    res.json(reservation);
 });
 
 // Delete reservation (only creator or admin)

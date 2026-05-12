@@ -26,18 +26,6 @@ export function ReservationsProvider ({ children }) {
         }
     }
 
-    const getReservationsForDate = (date, time) => {
-        if (!reservations || reservations.length === 0) return [];
-        if (time) {
-            return reservations.filter(r => {
-                const rDate = new Date(r.start);
-                return rDate.toISOString().slice(0, 10) === date &&
-                    rDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) === time;
-            });
-        }
-        return reservations.filter(r => new Date(r.start).toISOString().slice(0, 10) === date);
-    }
-
     const getReservationsForIDs = (ids) => {
         if (!reservations || reservations.length === 0) return [];
         return reservations.filter(r => ids.includes(r._id));
@@ -68,6 +56,22 @@ export function ReservationsProvider ({ children }) {
         refreshReservations(); // Refresca
     };
 
+    // Editar reserva
+    const handleEditReservation = async (id, data) => {
+        try {
+            await axios.put(process.env.REACT_APP_API_URL + '/reservations/' + id, data, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            refreshReservations();
+        } catch (err) {
+            alert(
+                err.response?.data?.error ||
+                err.response?.data?.message ||
+                'Error al editar la reserva'
+            );
+        }
+    };
+
     // Cargar reservas propias
     useEffect(() => {
         refreshReservations();
@@ -75,7 +79,7 @@ export function ReservationsProvider ({ children }) {
     }, [token]);
 
     return (
-        <ReservationsContext.Provider value={{ refreshReservations, reservations, getReservationsForDate, getReservationsForIDs, handleCreateReservation, handleDeleteReservation }}>
+        <ReservationsContext.Provider value={{ reservations, getReservationsForIDs, handleCreateReservation, handleDeleteReservation, handleEditReservation }}>
             {children}
         </ReservationsContext.Provider>
     );

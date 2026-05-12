@@ -6,6 +6,7 @@ import utc from 'dayjs/plugin/utc';
 import styles from './CalendarTable.module.scss';
 import { useToken } from '../context/TokenContext';
 import { useTables } from '../context/TablesContext';
+import { useSlots } from '../context/SlotsContext';
 import {
     Box,
     Table,
@@ -52,7 +53,7 @@ function ReservationCell ({ value, onClick, selected }) {
 export default function CalendarTable ({ date, setIDs }) {
     // Obtener mesas del contexto
     const { tables, loading: loadingTables, findTableById } = useTables();
-    const [slots, setSlots] = useState([]);
+    const { slots, refreshSlots } = useSlots();
     const { token } = useToken();
     const [loading, setLoading] = useState(true);
     const [selectedCell, setSelectedCell] = useState(null);
@@ -63,9 +64,10 @@ export default function CalendarTable ({ date, setIDs }) {
         const min = i % 2 === 0 ? '00' : '30';
 
         // current: Date JS en zona local
-        const local = dayjs.tz(date + `T${hour}:${min}`, 'Europe/Madrid');
+        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const local = dayjs.tz(date + `T${hour}:${min}`, timezone);
         return {
-            current: local.utc().toISOString().slice(11, 16), // HH:mm en UTC para comparar con backend
+            current: local.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             local: local.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         };
     });
@@ -75,26 +77,8 @@ export default function CalendarTable ({ date, setIDs }) {
             return;
         }
         setLoading(true);
-        const fetchSlots = async () => {
-            try {
-                const res = await axios.get(process.env.REACT_APP_API_URL + '/slots', {
-                    headers: { Authorization: `Bearer ${token}` },
-                    params: { date, tableIds: tables.map(t => t._id).join(',') }
-                });
-                if (res.data && res.data.slots) {
-                    setSlots(res.data.slots);
-                } else {
-                    console.error('Respuesta inesperada de /slots:', res.data);
-                    setSlots([]);
-                }
-            } catch (e) {
-                console.error('Error en fetchSlots', e);
-                setSlots([]);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchSlots();
+        setSelectedCell(null);
+        refreshSlots().then(() => setLoading(false));
     }, [date, token, loadingTables, tables]);
 
     return (
@@ -146,7 +130,6 @@ export default function CalendarTable ({ date, setIDs }) {
                                                             } else {
                                                                 if (value[slot.current] && value[slot.current].reservations) {
                                                                     setIDs(() => value[slot.current].reservations.map(r => r.id));
-                                                                    console.log('IDS: ', value[slot.current].reservations.map(r => r.id));
                                                                 }
                                                                 setSelectedCell(`${tableId}-${slot.current}`);
                                                             }

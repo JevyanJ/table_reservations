@@ -4,18 +4,61 @@ import {
     TextField,
     Typography
 } from '@mui/material';
+import { Button, Modal } from '@mui/material';
+import dayjs from 'dayjs';
+import timezone from 'dayjs/plugin/timezone';
 import ReservationList from '../components/ReservationList';
 import CalendarTable from '../components/CalendarTable';
 import ReservationForm from '../components/ReservationForm';
-import { Button, Modal } from '@mui/material';
-import dayjs from 'dayjs';
+import { useSlots } from '../context/SlotsContext';
+import { useReservations } from '../context/ReservationsContext';
+
 
 export default function ReservationsPage () {
     // Inicializar con el día actual en formato YYYY-MM-DD
     const todayStr = new Date().toISOString().split('T')[0];
-    const [date, setDate] = useState(todayStr);
+    const { date, updateDate, refreshSlots } = useSlots();
+    const { handleCreateReservation } = useReservations();
     const [ids, setIDs] = useState([]); // Agregar estado para los IDs de reservas seleccionadas
     const [openModal, setOpenModal] = useState(false);
+    const [selectedReservation, setSelectedReservation] = useState(null);
+
+    const closeReservationModal = () => {
+        setOpenModal(false);
+        setSelectedReservation(null);
+        refreshSlots();
+    }
+
+    const saveNewReservation = async (data) => {
+        try {
+            handleCreateReservation(data);
+            setOpenModal(false);
+            setSelectedReservation(null);
+            refreshSlots();
+        } catch (err) {
+            console.error('Error al crear o editar la reserva:', err);
+            alert('Error al crear o editar la reserva. Inténtalo de nuevo.');
+        }
+    }
+
+    const editReservation = (data) => {
+        const reservationData = {
+            title: data.title,
+            description: data.description,
+            tableId: data.table._id,
+            start: dayjs(data.start).format('HH:mm'),
+            end: dayjs(data.end).format('HH:mm'),
+            users: data.users,
+            userCount: data.userCount
+        }
+        setSelectedReservation(reservationData);
+        setOpenModal(true);
+    }
+
+    const changeDate = (newDate) => {
+        updateDate(newDate);
+        setIDs([]); // Limpiar IDs al cambiar de fecha
+    }
 
     return (
         <Box>
@@ -27,7 +70,7 @@ export default function ReservationsPage () {
                     label="Fecha"
                     type="date"
                     value={date}
-                    onChange={e => setDate(e.target.value)}
+                    onChange={e => changeDate(e.target.value)}
                 />
                 <Button
                     variant="contained"
@@ -38,15 +81,15 @@ export default function ReservationsPage () {
                     Nueva Reserva
                 </Button>
             </Box>
-            <Box sx={{ display: 'flex', gap: 4, alignItems: 'flex-start', ml: 2 }}>
+            <Box sx={{ display: 'flex', gap: 4, alignItems: 'flex-start', ml: 2, mr: 5 }}>
                 <Box sx={{ flex: 2, minWidth: 0 }}>
                     <CalendarTable date={date} setIDs={setIDs} />
-                    <ReservationList ids={ids} />
+                    <ReservationList ids={ids} onEdit={editReservation} />
                 </Box>
             </Box>
             <Modal
                 open={openModal}
-                onClose={() => setOpenModal(false)}
+                onClose={closeReservationModal}
                 aria-labelledby="modal-reserva-title"
                 aria-describedby="modal-reserva-desc"
             >
@@ -57,7 +100,7 @@ export default function ReservationsPage () {
                         alignItems: 'center', p: 1
                     }}>
                         <Button
-                            onClick={() => setOpenModal(false)}
+                            onClick={closeReservationModal}
                             sx={{
                                 minWidth: 0,
                                 padding: 0.5,
@@ -71,7 +114,11 @@ export default function ReservationsPage () {
                             ×
                         </Button>
                     </Box>
-                    <ReservationForm date={date} onClose={() => setOpenModal(false)} />
+                    <ReservationForm
+                        date={date}
+                        data={selectedReservation || {}}
+                        onAction={saveNewReservation}
+                    />
                 </Box>
             </Modal>
         </Box>
