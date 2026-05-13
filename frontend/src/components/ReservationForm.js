@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import Autocomplete from '@mui/material/Autocomplete';
 import dayjs from 'dayjs';
-import timezone from 'dayjs/plugin/timezone';
 import {
     FormControl,
     InputLabel,
@@ -19,7 +18,8 @@ import { useUsers } from '../context/UsersContext';
 export default function ReservationForm ({
     date,
     data,
-    onAction
+    onSave,
+    onUpdate
 }) {
 
     const { tables } = useTables();
@@ -27,14 +27,7 @@ export default function ReservationForm ({
     const { users } = useUsers();
     const [availableUsers, setAvailableUsers] = useState(users.filter(u => u._id !== me._id)); // Excluir al usuario actual de la lista
     const [selectedTable, setSelectedTable] = useState('');
-    const [form, setForm] = useState(data ? {
-        ...data,
-        start: data.start || '',
-        end: data.end || '',
-        users: data.users || (me ? [me] : []),
-        numPlayers: data.numPlayers || (me ? 1 : 0),
-        fullTable: data.fullTable || false
-    } : {
+    const [form, setForm] = useState({
         start: '',
         end: '',
         users: me ? [me] : [],
@@ -42,6 +35,13 @@ export default function ReservationForm ({
         fullTable: false
     });
 
+    useEffect(() => {
+        if (data) {
+            console.log('Cargando datos en el formulario:', data);
+            setForm(data);
+            setSelectedTable(data.tableId);
+        }
+    }, [data]);
 
     const resetForm = () => {
         setSelectedTable('');
@@ -72,17 +72,30 @@ export default function ReservationForm ({
             alert('Por favor, completa todos los campos obligatorios y asegúrate de que la hora de fin sea posterior a la de inicio.');
             return;
         }
+        if (data) {
+            onUpdate({
+                ...data,
+                title: form.title,
+                description: form.description,
+                tableId: selectedTable,
+                start: dayjs(date + 'T' + form.start).toDate(),
+                end: dayjs(date + 'T' + form.end).toDate(),
+                userIds: form.users.map(u => u._id),
+                numPlayers: form.numPlayers,
+                fullTable: form.fullTable
+            });
+        } else {
 
-        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        onAction({
-            title: form.title,
-            description: form.description,
-            tableId: selectedTable,
-            start: dayjs(date + 'T' + form.start).tz(timezone).toDate(),
-            end: dayjs(date + 'T' + form.end).tz(timezone).toDate(),
-            userIds: form.users.map(u => u._id),
-            fullTable: form.fullTable
-        });
+            onSave({
+                title: form.title,
+                description: form.description,
+                tableId: selectedTable,
+                start: dayjs(date + 'T' + form.start).toDate(),
+                end: dayjs(date + 'T' + form.end).toDate(),
+                userIds: form.users.map(u => u._id),
+                fullTable: form.fullTable
+            });
+        }
     };
 
 
@@ -242,7 +255,7 @@ export default function ReservationForm ({
                     variant="contained"
                     disabled={!form.start || !form.end || (form.start && form.end && form.end <= form.start)}
                 >
-                    Reservar
+                    {data ? "Guardar" : "Reservar"}
                 </Button>
             </Box>
         </Box>

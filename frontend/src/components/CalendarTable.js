@@ -63,13 +63,7 @@ export default function CalendarTable ({ date, setIDs }) {
         const hour = String(Math.floor(i / 2)).padStart(2, '0');
         const min = i % 2 === 0 ? '00' : '30';
 
-        // current: Date JS en zona local
-        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        const local = dayjs.tz(date + `T${hour}:${min}`, timezone);
-        return {
-            current: local.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            local: local.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        };
+        return dayjs(date + `T${hour}:${min}`).toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     });
 
     useEffect(() => {
@@ -100,11 +94,11 @@ export default function CalendarTable ({ date, setIDs }) {
                                     </TableCell>
                                     {timeSlots.map(slot => (
                                         <TableCell
-                                            key={slot.local}
+                                            key={slot}
                                             align="center"
                                             className={styles['calendar-table-cell']}
                                         >
-                                            {slot.local}
+                                            {slot}
                                         </TableCell>
                                     ))}
                                 </TableRow>
@@ -120,18 +114,18 @@ export default function CalendarTable ({ date, setIDs }) {
                                             {timeSlots.map(slot => {
                                                 return (
                                                     <ReservationCell
-                                                        key={`${tableId}-${slot.current}`}
-                                                        value={value[slot.current]}
-                                                        selected={selectedCell === `${tableId}-${slot.current}`}
+                                                        key={`${tableId}-${slot}`}
+                                                        value={value[slot]}
+                                                        selected={selectedCell === `${tableId}-${slot}`}
                                                         onClick={() => {
-                                                            if (selectedCell === `${tableId}-${slot.current}`) {
+                                                            if (selectedCell === `${tableId}-${slot}`) {
                                                                 setIDs([]);
                                                                 setSelectedCell(null);
                                                             } else {
-                                                                if (value[slot.current] && value[slot.current].reservations) {
-                                                                    setIDs(() => value[slot.current].reservations.map(r => r.id));
+                                                                if (value[slot] && value[slot].reservations) {
+                                                                    setIDs(() => value[slot].reservations.map(r => r.id));
                                                                 }
-                                                                setSelectedCell(`${tableId}-${slot.current}`);
+                                                                setSelectedCell(`${tableId}-${slot}`);
                                                             }
                                                         }}
                                                     />

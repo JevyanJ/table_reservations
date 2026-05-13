@@ -18,7 +18,7 @@ export default function ReservationsPage () {
     // Inicializar con el día actual en formato YYYY-MM-DD
     const todayStr = new Date().toISOString().split('T')[0];
     const { date, updateDate, refreshSlots } = useSlots();
-    const { handleCreateReservation } = useReservations();
+    const { handleCreateReservation, handleEditReservation } = useReservations();
     const [ids, setIDs] = useState([]); // Agregar estado para los IDs de reservas seleccionadas
     const [openModal, setOpenModal] = useState(false);
     const [selectedReservation, setSelectedReservation] = useState(null);
@@ -41,15 +41,28 @@ export default function ReservationsPage () {
         }
     }
 
+    const updateReservation = async (data) => {
+        try {
+            const id = await handleEditReservation(data);
+            if (!id) {
+                alert('Ocurrió un error al actualizar la reserva. Inténtalo de nuevo.');
+                return;
+            }
+            setOpenModal(false);
+            setSelectedReservation(null);
+            refreshSlots();
+        } catch (err) {
+            console.error('Error al crear o editar la reserva:', err);
+            alert('Error al crear o editar la reserva. Inténtalo de nuevo.');
+        }
+    }
+
     const editReservation = (data) => {
         const reservationData = {
-            title: data.title,
-            description: data.description,
+            ...data,
             tableId: data.table._id,
             start: dayjs(data.start).format('HH:mm'),
-            end: dayjs(data.end).format('HH:mm'),
-            users: data.users,
-            userCount: data.userCount
+            end: dayjs(data.end).format('HH:mm')
         }
         setSelectedReservation(reservationData);
         setOpenModal(true);
@@ -117,7 +130,8 @@ export default function ReservationsPage () {
                     <ReservationForm
                         date={date}
                         data={selectedReservation || {}}
-                        onAction={saveNewReservation}
+                        onSave={saveNewReservation}
+                        onUpdate={updateReservation}
                     />
                 </Box>
             </Modal>

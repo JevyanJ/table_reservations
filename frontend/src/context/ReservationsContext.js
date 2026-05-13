@@ -57,18 +57,19 @@ export function ReservationsProvider ({ children }) {
     };
 
     // Editar reserva
-    const handleEditReservation = async (id, data) => {
+    const handleEditReservation = async (data) => {
         try {
-            await axios.put(process.env.REACT_APP_API_URL + '/reservations/' + id, data, {
+            const { _id, ...updateData } = data;
+            if (!_id) {
+                return null;
+            }
+            await axios.put(process.env.REACT_APP_API_URL + '/reservations/' + _id, updateData, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             refreshReservations();
+            return _id;
         } catch (err) {
-            alert(
-                err.response?.data?.error ||
-                err.response?.data?.message ||
-                'Error al editar la reserva'
-            );
+            return null;
         }
     };
 
